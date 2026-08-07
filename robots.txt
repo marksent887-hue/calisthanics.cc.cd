@@ -1,0 +1,14 @@
+# FLOW — was Suchmaschinen sehen duerfen
+#
+# Erlaubt ist alles ausser den Bruchstuecken, die keine eigene Seite
+# sind: seitenwechsel.html ist eine Animation, logo-ascii.html ein
+# Bauteil. Beide ohne Inhalt, den jemand suchen wuerde — im Index
+# waeren sie nur Ballast und wuerden echte Seiten verdraengen.
+
+User-agent: *
+Allow: /
+Disallow: /seitenwechsel.html
+Disallow: /logo-ascii.html
+Disallow: /rang/
+
+Sitemap: https://calisthanics.cc.cd/sitemap.xml

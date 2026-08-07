@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLOW · Rang-Objekte</title>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --grund:#14110f; --grund-2:#1b1714; --linie:#2e2621;
+    --text:#efe5da; --gedaempft:#8d8177; --leise:#857a71; --haarlinie:#5f564f;
+    --marke:#e8492b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--grund); color:var(--text);
+    font-family:Archivo, Helvetica, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #buehne{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:1}
+
+  .rahmen{display:grid; grid-template-columns:320px 1fr; min-height:100%}
+
+  /* ── Pult ─────────────────────────────────────────────────────────── */
+  .pult{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    border-right:1px solid var(--linie); background:var(--grund-2);
+    padding:28px 26px 40px; z-index:3;
+  }
+  .marke{display:flex; align-items:baseline; gap:10px; margin-bottom:6px}
+  .marke b{font-size:19px; font-weight:700; letter-spacing:.14em}
+  .marke span{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--leise); letter-spacing:.16em}
+  .pult h1{font-size:13px; font-weight:600; letter-spacing:.02em; margin:0 0 4px; color:var(--text)}
+  .pult .fussnote{font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.6; color:var(--gedaempft); margin:0 0 26px}
+
+  .gruppe{border-top:1px solid var(--linie); padding:18px 0 4px}
+  .kopf{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:2px}
+  .kopf label{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--text)}
+  .kopf output{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--marke)}
+  .gruppe p{font-size:11.5px; line-height:1.5; color:var(--leise); margin:0 0 10px}
+
+  input[type=range]{
+    accent-color:var(--text);
+    -webkit-appearance:none; appearance:none; width:100%; height:22px; background:transparent; cursor:ew-resize; margin:0;
+  }
+  input[type=range]::-webkit-slider-runnable-track{height:2px; background:var(--linie)}
+  input[type=range]::-moz-range-track{height:2px; background:var(--linie)}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:11px; height:11px; border-radius:50%;
+    background:var(--text); margin-top:-4.5px; transition:background .15s;
+  }
+  input[type=range]::-moz-range-thumb{width:11px; height:11px; border:0; border-radius:50%; background:var(--text)}
+  input[type=range]:hover::-webkit-slider-thumb{background:var(--marke)}
+
+  .felder{display:grid; grid-template-columns:repeat(2,1fr); gap:2px 16px}
+  .feld{display:grid; grid-template-columns:1fr auto; align-items:baseline; column-gap:6px}
+  .feld em{grid-column:1/-1; font-style:normal; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em; color:var(--gedaempft)}
+  .feld input{grid-column:1/2}
+  .feld b{grid-column:2/3; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:400; color:var(--marke)}
+
+  .knoepfe{display:flex; gap:8px; margin-top:22px}
+  button{
+    flex:1; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--text); background:transparent;
+    border:1px solid var(--linie); padding:9px 6px; cursor:pointer; transition:.15s;
+  }
+  button:hover{border-color:var(--marke); color:var(--marke)}
+
+  /* ── Raster ───────────────────────────────────────────────────────── */
+  .feldung{padding:34px 34px 60px}
+  .leitsatz{
+    display:flex; flex-wrap:wrap; gap:6px 26px; align-items:baseline;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--leise);
+    letter-spacing:.06em; margin:0 0 26px; padding-bottom:20px; border-bottom:1px solid var(--linie);
+  }
+  .leitsatz b{color:var(--gedaempft); font-weight:400}
+
+  .raster{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--linie); border:1px solid var(--linie)}
+  .zelle{background:var(--grund); padding:16px 16px 14px; position:relative}
+  .zelle::after{content:''; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 0 0 var(--marke); transition:box-shadow .2s}
+  .zelle:hover::after{box-shadow:inset 0 0 0 1px var(--marke)}
+  .zeile{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+  .nr{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--leise)}
+  .name{font-size:13px; font-weight:600; letter-spacing:.16em}
+  .sicht{aspect-ratio:1/1; width:100%; margin:2px 0 8px; cursor:grab; touch-action:none}
+  .sicht:active{cursor:grabbing}
+  .satz{font-size:11.5px; color:var(--gedaempft); margin:0 0 6px; min-height:2.6em; line-height:1.35; text-wrap:pretty}
+  .werte{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--leise); letter-spacing:.04em}
+  .werte i{font-style:normal; color:var(--gedaempft)}
+  .zelle[data-gipfel] .werte i{color:var(--marke)}
+
+  @media (max-width:1180px){ .raster{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:860px){
+    .rahmen{grid-template-columns:1fr}
+    .pult{position:static; height:auto; border-right:0; border-bottom:1px solid var(--linie)}
+    .feldung{padding:22px 18px 50px}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="buehne"></canvas>
+
+<div class="rahmen">
+  <aside class="pult">
+    <div class="marke"><b>FLOW</b><span>RANGABZEICHEN</span></div>
+    <h1>Ein Porträt, kein Abzeichen.</h1>
+    <p class="fussnote">Vier Werte, aus dem Training gerechnet. Dieselbe Biografie auf allen acht Stufen — verstell sie und sieh zu, wie zwei Menschen auf derselben Stufe verschieden aussehen.</p>
+
+    <div class="gruppe">
+      <div class="kopf"><label for="kern">Kern</label><output id="kern-wert">2</output></div>
+      <p>Längste Trainingsserie. Wird Masse im Zentrum.</p>
+      <input type="range" id="kern" min="0" max="4" step="1" value="2">
+    </div>
+
+    <div class="gruppe">
+      <div class="kopf"><label for="ringe">Ringe</label><output id="ringe-wert">2</output></div>
+      <p>Tage dabei. Je Ring eine zusätzliche Umlaufbahn.</p>
+      <input type="range" id="ringe" min="0" max="6" step="1" value="2">
+    </div>
+
+    <div class="gruppe">
+      <div class="kopf"><label for="spangen">Spangen</label><output id="spangen-wert">3</output></div>
+      <p>Verdiente Titel. Werden Trabanten auf den Bahnen.</p>
+      <input type="range" id="spangen" min="0" max="8" step="1" value="3">
+    </div>
+
+    <div class="gruppe">
+      <div class="kopf"><label>Felder</label><output id="felder-wert">15</output></div>
+      <p>Sechs Muskelstufen. Jede wird ein umlaufender Körper ihrer Größe.</p>
+      <div class="felder" id="felder"></div>
+    </div>
+
+    <div class="knoepfe">
+      <button id="zufall">Zufällige Biografie</button>
+      <button id="anfang">Anfänger</button>
+    </div>
+  </aside>
+
+  <main class="feldung">
+    <p class="leitsatz">
+      <span><b>Regel 1 ·</b> Aufstieg zeigt man durch Weglassen. Komplexität gipfelt bei 6.</span>
+      <span><b>Regel 2 ·</b> Vom Beleuchteten zum Leuchtenden.</span>
+    </p>
+    <div class="raster" id="raster"></div>
+  </main>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { erzeugeRangObjekt, beleuchteSzene, erzeugeUmgebung, STUFEN, FELDNAMEN, stufenGrenzen }
+  from './rangobjekt.js';
+
+const leinwand = document.getElementById('buehne');
+const renderer = new THREE.WebGLRenderer({ canvas: leinwand, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));   // Vorgabe: nie mehr als 2
+renderer.setClearAlpha(0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const umgebung = erzeugeUmgebung(renderer);
+
+const werte = { kern: 2, ringe: 2, spangen: 3, felder: [2, 3, 1, 4, 2, 3] };
+const zellen = [];
+
+/* Acht Szenen statt einer, weil das Licht die halbe Erzählung ist: Stufe 1
+ * braucht ein hartes Schlaglicht mit Schatten, Stufe 8 gar keins mehr. */
+const raster = document.getElementById('raster');
+for (const s of STUFEN) {
+  const el = document.createElement('article');
+  el.className = 'zelle';
+  if (s.nr === 6) el.dataset.gipfel = '';
+  el.innerHTML = `
+    <div class="zeile"><span class="name">${s.name}</span><span class="nr">${String(s.nr).padStart(2, '0')}</span></div>
+    <div class="sicht"></div>
+    <p class="satz">${s.satz}</p>
+    <div class="werte"></div>`;
+  raster.appendChild(el);
+
+  const szene = new THREE.Scene();
+  szene.environment = umgebung;
+  szene.environmentIntensity = 0.22 + ((s.nr - 1) / 7) * 0.95;
+  beleuchteSzene(szene, s.nr);
+
+  const kamera = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
+  kamera.position.set(0, 0.4, 2.72);
+  kamera.lookAt(0, 0.07, 0);
+
+  const traeger = new THREE.Group();       // trägt nur die Handdrehung des Nutzers
+  szene.add(traeger);
+
+  zellen.push({ stufe: s.nr, el, sicht: el.querySelector('.sicht'),
+                bericht: el.querySelector('.werte'), szene, kamera, traeger, objekt: null });
+}
+
+function entsorge(gruppe) {
+  gruppe.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+  });
+}
+
+function baueAlle() {
+  for (const z of zellen) {
+    if (z.objekt) { z.traeger.remove(z.objekt); entsorge(z.objekt); }
+    z.objekt = erzeugeRangObjekt({ stufe: z.stufe, ...werte });
+    z.traeger.add(z.objekt);
+    const b = z.objekt.userData.bericht;
+    /* Die Kernteile stehen bewusst hier: sie sind die Probe auf Regel 1 —
+     * die Zahl muss bei 6 gipfeln und bei 8 wieder klein sein. */
+    z.bericht.innerHTML = `<i>${b.kernteile}</i> kernteile · ${b.bahnen} bahnen · ${b.trabanten} trabanten`;
+  }
+}
+
+// ── Regler ───────────────────────────────────────────────────────────────
+const felderPult = document.getElementById('felder');
+FELDNAMEN.forEach((name, i) => {
+  const d = document.createElement('div');
+  d.className = 'feld';
+  d.innerHTML = `<em>${name}</em>
+    <input type="range" min="0" max="5" step="1" value="${werte.felder[i]}" data-feld="${i}">
+    <b>${werte.felder[i]}</b>`;
+  felderPult.appendChild(d);
+});
+
+let neubauAngefordert = false;
+function neubau() {
+  if (neubauAngefordert) return;
+  neubauAngefordert = true;
+  requestAnimationFrame(() => { neubauAngefordert = false; baueAlle(); });
+}
+
+function zeigeWerte() {
+  for (const k of ['kern', 'ringe', 'spangen']) {
+    document.getElementById(k).value = werte[k];
+    document.getElementById(k + '-wert').textContent = werte[k];
+  }
+  document.querySelectorAll('[data-feld]').forEach((s) => {
+    s.value = werte.felder[+s.dataset.feld];
+    s.nextElementSibling.textContent = s.value;
+  });
+  document.getElementById('felder-wert').textContent = werte.felder.reduce((a, b) => a + b, 0);
+}
+
+document.querySelector('.pult').addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.dataset.feld !== undefined) werte.felder[+el.dataset.feld] = +el.value;
+  else if (el.id in werte) werte[el.id] = +el.value;
+  else return;
+  zeigeWerte(); neubau();
+});
+
+document.getElementById('zufall').onclick = () => {
+  const w = (n) => Math.floor(Math.random() * (n + 1));
+  Object.assign(werte, { kern: w(4), ringe: w(6), spangen: w(8),
+                         felder: Array.from({ length: 6 }, () => w(5)) });
+  zeigeWerte(); neubau();
+};
+document.getElementById('anfang').onclick = () => {
+  Object.assign(werte, { kern: 0, ringe: 0, spangen: 0, felder: [1, 0, 1, 0, 0, 0] });
+  zeigeWerte(); neubau();
+};
+
+// ── Handdrehung je Zelle ─────────────────────────────────────────────────
+for (const z of zellen) {
+  let letzte = null;
+  z.sicht.addEventListener('pointerdown', (e) => {
+    letzte = { x: e.clientX, y: e.clientY }; z.sicht.setPointerCapture(e.pointerId);
+  });
+  z.sicht.addEventListener('pointermove', (e) => {
+    if (!letzte) return;
+    z.traeger.rotation.y += (e.clientX - letzte.x) * 0.008;
+    z.traeger.rotation.x = Math.max(-1.1, Math.min(1.1, z.traeger.rotation.x + (e.clientY - letzte.y) * 0.006));
+    letzte = { x: e.clientX, y: e.clientY };
+  });
+  const los = () => { letzte = null; };
+  z.sicht.addEventListener('pointerup', los);
+  z.sicht.addEventListener('pointercancel', los);
+}
+
+// ── Schleife: ein Renderer, acht Ausschnitte ─────────────────────────────
+function passeGroesseAn() { renderer.setSize(innerWidth, innerHeight, false); }
+addEventListener('resize', passeGroesseAn);
+passeGroesseAn();
+baueAlle();
+zeigeWerte();
+
+function schleife() {
+  const zeit = performance.now() / 1000;
+  renderer.setScissorTest(false);
+  renderer.clear();
+  renderer.setScissorTest(true);
+  for (const z of zellen) {
+    const r = z.sicht.getBoundingClientRect();
+    /* Was nicht im Bild ist, wird nicht gerechnet — dafür läuft die Seite
+     * auch auf einem Telefon mit acht Objekten gleichzeitig. */
+    if (r.bottom < -40 || r.top > innerHeight + 40 || r.width < 2) continue;
+    const unten = innerHeight - r.bottom;
+    renderer.setViewport(r.left, unten, r.width, r.height);
+    renderer.setScissor(r.left, unten, r.width, r.height);
+    if (z.objekt) z.objekt.userData.animiere(zeit);
+    renderer.render(z.szene, z.kamera);
+  }
+  requestAnimationFrame(schleife);
+}
+schleife();
+</script>
+</body>
+</html>
