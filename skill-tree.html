@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="flow-logo-klein.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Quenlo — Der Baum</title>
+<!-- Fuer Suchmaschinen und zum Teilen. Die Beschreibung ist das,
+     was unter dem blauen Link bei Google steht; die og-Zeilen sind
+     die Vorschaukarte in WhatsApp, Instagram und Discord.
+     og:image MUSS eine vollstaendige Adresse sein — mit einem
+     relativen Pfad zeigen die Netzwerke gar kein Bild.        -->
+<meta name="description" content="70 Calisthenics-Uebungen von den Grundlagen bis Planche, Front Lever und Handstand. Sieh, was als Naechstes dran ist.">
+<link rel="canonical" href="https://calisthanics.cc.cd/skill-tree.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Quenlo">
+<meta property="og:title" content="Quenlo Skill-Tree — 70 Calisthenics-Uebungen">
+<meta property="og:description" content="70 Calisthenics-Uebungen von den Grundlagen bis Planche, Front Lever und Handstand. Sieh, was als Naechstes dran ist.">
+<meta property="og:url" content="https://calisthanics.cc.cd/skill-tree.html">
+<meta property="og:image" content="https://calisthanics.cc.cd/flow-logo-klein.png">
+<meta name="twitter:card" content="summary">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ember:#E8492B;
+    --paper:#F5F1EA;
+    --ink:#080808;
+    --font:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--paper);
+            font-family:var(--font);overscroll-behavior:none}
+
+  /* ── Die Leinwand ── */
+  #baum{position:fixed;inset:0;display:block;cursor:grab;touch-action:none}
+  #baum.zieht{cursor:grabbing}
+
+  /* ── Kopfzeile ── */
+  /* z-index ueber der Karte (30): sonst liegt die Karte auf dem
+     Zurueck-Knopf und der ist nicht mehr anklickbar, solange eine
+     Uebung offen ist. Gemessen mit elementFromPoint. Die Kopfzeile
+     ist bis auf den Knopf pointer-events:none, stoert also nicht. */
+  .kopf{position:fixed;top:0;left:0;right:0;z-index:40;padding:18px 22px;
+        display:flex;align-items:baseline;gap:16px;pointer-events:none;
+        background:linear-gradient(to bottom,rgba(8,8,8,.92),rgba(8,8,8,0))}
+  .kopf h1{font-size:13px;font-weight:900;letter-spacing:.2em;text-transform:uppercase}
+  .kopf .unter{font-size:11px;letter-spacing:.14em;color:rgba(245,241,234,.45)}
+  .kopf .zurueck{pointer-events:auto;margin-left:auto;background:transparent;
+        border:1px solid rgba(245,241,234,.22);color:rgba(245,241,234,.7);
+        font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.16em;
+        text-transform:uppercase;padding:8px 13px;cursor:pointer;text-decoration:none;
+        transition:all .18s ease}
+  .kopf .zurueck:hover{border-color:var(--ember);color:var(--paper);background:rgba(232,73,43,.16)}
+
+  /* ── Legende der Äste ── */
+  .aeste{position:fixed;left:22px;bottom:22px;z-index:20;display:flex;
+         flex-direction:column;gap:7px}
+  .ast-z{display:flex;align-items:center;gap:9px;font-size:10px;letter-spacing:.12em;line-height:1.5;min-height:18px;
+         text-transform:uppercase;color:rgba(245,241,234,.5);cursor:pointer;
+         background:none;border:0;font-family:inherit;padding:2px 0;transition:color .16s}
+  .ast-z:hover,.ast-z.an{color:var(--paper)}
+  .ast-z i{width:9px;height:9px;flex:0 0 auto;border-radius:50%;display:block;
+           box-shadow:0 0 8px currentColor}
+  .ast-z b{font-variant-numeric:tabular-nums;font-weight:600;opacity:.6;margin-left:2px}
+
+  /* ── Fortschritt ── */
+  /* Der Zaehler steht rechts unten, die Karte rechts — auf breiten
+     Schirmen ueberlappen sie zwangslaeufig, und der Zaehler ragte
+     unter der Karte hervor. Solange eine Uebung offen ist, tritt er
+     zurueck; die Zahl ist dann ohnehin nicht das Thema.            */
+  .stand{position:fixed;right:22px;bottom:22px;z-index:20;text-align:right;
+         transition:opacity .22s ease}
+  body.karte-auf .stand{opacity:0;pointer-events:none}
+  .stand .zahl{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.04em;
+               line-height:.9;font-variant-numeric:tabular-nums}
+  .stand .zahl u{text-decoration:none;color:var(--ember)}
+  .stand .txt{font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+              color:rgba(245,241,234,.45);margin-top:6px}
+
+  /* ── Hinweis zur Bedienung ── */
+  .hilfe{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:19;
+         font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+         color:rgba(245,241,234,.28);pointer-events:none;transition:opacity .6s ease;
+         white-space:nowrap}
+  .hilfe.weg{opacity:0}
+
+  /* ── Karte einer Übung ── */
+  /* Deckend, nicht 96 %: dahinter liegt der Zaehler unten rechts, und
+     der schimmerte gut lesbar durch. Der backdrop-filter half dagegen
+     nicht — bei voller Deckung hat er ohnehin nichts mehr zu tun. */
+  .karte{position:fixed;right:22px;top:50%;transform:translateY(-50%) translateX(24px);
+         width:min(330px,calc(100vw - 44px));z-index:30;background:#0C0C0C;
+         border:1px solid rgba(245,241,234,.14);padding:22px;
+         opacity:0;pointer-events:none;transition:opacity .28s ease,transform .28s cubic-bezier(.16,.84,.28,1);
+         /* Luft fuer die Kopfzeile lassen, sonst schiebt sich die Karte
+            darunter und verdeckt den Zurueck-Knopf.                  */
+         max-height:calc(100vh - 124px);overflow-y:auto}
+  .karte.an{opacity:1;pointer-events:auto;transform:translateY(-50%) translateX(0)}
+  .karte .k-ast{font-size:9px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+  .karte h2{font-size:23px;font-weight:900;letter-spacing:-.025em;line-height:1.04;
+            margin:9px 0 12px;text-transform:uppercase}
+  /* ── Bestwert statt Satzangaben ──
+     Sätze und Pausen stehen im Training; hier zählt nur, wie weit
+     man gekommen ist.                                              */
+  .karte .k-pr{border-top:1px solid rgba(245,241,234,.12);
+               border-bottom:1px solid rgba(245,241,234,.12);
+               padding:13px 0;margin-bottom:14px}
+  .karte .k-pr-kopf{display:flex;justify-content:space-between;align-items:baseline;
+                    font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;
+                    color:rgba(245,241,234,.42)}
+  .karte .k-pr-kopf em{font-style:normal;font-size:8.5px}
+  .karte .k-pr-wert{display:flex;align-items:baseline;gap:7px;margin:7px 0 11px}
+  .karte .k-pr-wert b{font-size:34px;font-weight:900;letter-spacing:-.04em;line-height:.9;
+                      font-variant-numeric:tabular-nums;color:var(--ember)}
+  .karte .k-pr-wert b.leer{color:rgba(245,241,234,.24);font-size:24px}
+  .karte .k-pr-wert i{font-style:normal;font-size:11px;letter-spacing:.1em;
+                      text-transform:uppercase;color:rgba(245,241,234,.5)}
+  .karte .k-pr-neu{display:flex;gap:7px}
+  .karte .k-pr-neu input{flex:1 1 auto;min-width:0;background:rgba(255,255,255,.05);
+        border:1px solid rgba(245,241,234,.16);color:var(--paper);font-family:inherit;
+        font-size:13px;padding:8px 10px;outline:none;transition:border-color .16s}
+  .karte .k-pr-neu input:focus{border-color:var(--ember)}
+  .karte .k-pr-neu button{background:transparent;border:1px solid rgba(245,241,234,.22);
+        color:var(--paper);font-family:inherit;font-size:9px;font-weight:800;
+        letter-spacing:.14em;text-transform:uppercase;padding:8px 13px;cursor:pointer;
+        transition:all .16s;flex:0 0 auto}
+  .karte .k-pr-neu button:hover{background:var(--ember);border-color:var(--ember)}
+  .karte .k-pr-hinweis{font-size:10px;line-height:1.5;color:rgba(245,241,234,.42);
+        margin-top:8px;min-height:14px}
+  .karte .k-pr-hinweis.gut{color:#6BD08A}
+  .karte .k-txt{font-size:12px;line-height:1.6;color:rgba(245,241,234,.68)}
+  .karte .k-koerper{display:flex;gap:8px;justify-content:center;margin:14px 0 4px;
+                    background:rgba(255,255,255,.03);padding:10px}
+  .karte .k-koerper > div{flex:1 1 0;max-width:104px}
+  .karte .k-koerper svg{width:100%;height:auto;display:block}
+  .karte .k-koerper .moutline path{fill:rgba(245,241,234,.26)}
+  .karte .k-koerper .mgroup path,.karte .k-koerper .mgroup ellipse{fill:rgba(255,255,255,.07)}
+  .karte .k-koerper .mgroup.p path,.karte .k-koerper .mgroup.p ellipse{fill:var(--ember)}
+  .karte .k-koerper .mgroup.s path,.karte .k-koerper .mgroup.s ellipse{fill:rgba(232,73,43,.36)}
+  .karte .k-kette{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+  .karte .k-kette button{background:rgba(255,255,255,.05);border:1px solid rgba(245,241,234,.14);
+        color:var(--paper);font-family:inherit;font-size:11px;text-align:left;
+        padding:9px 11px;cursor:pointer;transition:all .16s;display:flex;gap:9px;align-items:center}
+  .karte .k-kette button:hover{border-color:var(--ember);background:rgba(232,73,43,.14)}
+  .karte .k-kette button i{font-style:normal;font-size:9px;letter-spacing:.14em;
+        text-transform:uppercase;color:rgba(245,241,234,.4);flex:0 0 auto}
+  .karte .k-zu{position:absolute;top:12px;right:12px;width:26px;height:26px;
+        background:transparent;border:1px solid rgba(245,241,234,.2);color:var(--paper);
+        cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center;padding:0}
+  .karte .k-zu:hover{background:var(--ember);border-color:var(--ember)}
+  .karte .k-sperre{font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+        color:rgba(245,241,234,.38);border:1px dashed rgba(245,241,234,.2);
+        padding:8px 10px;margin-bottom:12px;text-align:center}
+
+  @media (max-width:720px){
+    .karte{right:12px;left:12px;width:auto;top:auto;bottom:12px;transform:translateY(24px);
+           max-height:60vh}
+    .karte.an{transform:translateY(0)}
+    .stand{bottom:auto;top:64px}
+    .aeste{bottom:12px;left:12px;gap:5px}
+    .ast-z{font-size:9px}
+    .hilfe{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){ .karte{transition:none} }
+</style>
+
+<!-- Umami — zaehlt Besuche, ohne Cookies und ohne persoenliche Daten.
+     Deshalb braucht die Seite kein Einwilligungsbanner.
+     "defer" ist wichtig: so haelt das Skript den Seitenaufbau nicht auf.
+     Die website-id ist keine Geheimzahl — sie steht bei jedem Umami
+     offen im Quelltext und identifiziert nur, zu welcher Seite die
+     Zaehlung gehoert.                                              -->
+<script defer src="https://cloud.umami.is/script.js" data-website-id="f2476503-16f0-40d2-a1e4-56d71a3f2061"></script>
+</head>
+<body>
+
+<canvas id="baum"></canvas>
+
+<header class="kopf">
+  <h1>Der Baum</h1>
+  <span class="unter" id="unter">—</span>
+  <a class="zurueck" href="app.html">Zurück zur App</a>
+</header>
+
+<div class="aeste" id="aeste"></div>
+
+<div class="stand">
+  <div class="zahl"><u id="offen">0</u>/<span id="gesamt">0</span></div>
+  <div class="txt">Freigeschaltet</div>
+</div>
+
+<div class="hilfe" id="hilfe">Ziehen zum Bewegen · Rad zum Zoomen · Knoten antippen</div>
+
+<article class="karte" id="karte">
+  <button class="k-zu" id="karte-zu" aria-label="Schließen">✕</button>
+  <div class="k-ast" id="k-ast"></div>
+  <h2 id="k-name"></h2>
+  <div class="k-sperre" id="k-sperre" hidden>Noch nicht freigeschaltet</div>
+  <div class="k-pr" id="k-pr">
+    <div class="k-pr-kopf"><span>Bestwert</span><em id="k-pr-datum"></em></div>
+    <div class="k-pr-wert"><b id="k-pr-zahl">—</b><i id="k-pr-einheit"></i></div>
+    <div class="k-pr-neu">
+      <input type="text" id="k-pr-eingabe" inputmode="decimal" placeholder="Wert eintragen" autocomplete="off">
+      <button id="k-pr-setzen">Setzen</button>
+    </div>
+    <p class="k-pr-hinweis" id="k-pr-hinweis"></p>
+  </div>
+  <div class="k-koerper"><div id="k-front"></div><div id="k-back"></div></div>
+  <p class="k-txt" id="k-txt"></p>
+  <div class="k-kette" id="k-kette"></div>
+</article>
+
+<script src="uebungs-daten.js"></script>
+<script src="muskel-svg.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   DER BAUM
+
+   108 Übungen als Sternbild. Sechs Äste wachsen aus einem Zentrum
+   nach außen, die Entfernung vom Zentrum ist die Schwierigkeit.
+
+   Warum kein Bild je Übung: jede Übung weiß, welche Muskeln sie
+   beansprucht — daraus zeichnet die Karte ihre eigene Silhouette.
+   Hundert Illustrationen wären hundertmal Arbeit für dieselbe
+   Aussage.
+
+   PLATZHALTER, die noch echte Arbeit brauchen:
+     · `ast` und `stufe` sind aus Namen und Muskeln GESCHÄTZT
+     · nur rund ein Fünftel der Verbindungen ist echt; der Rest
+       ergibt sich aus Ast und Stufe und ist damit geraten
+   Beides steht in uebungs-daten.js und ist dort zu ersetzen.
+   ══════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+
+  var U = window.FLOW_UEBUNGEN || {};
+  var IDS = Object.keys(U);
+
+  /* ── Die Äste ────────────────────────────────────────────────── */
+  var AESTE = [
+    { id:'druck',    name:'Druck',       farbe:'#E8492B' },
+    { id:'zug',      name:'Zug',         farbe:'#E8A22B' },
+    { id:'beine',    name:'Beine',       farbe:'#6BD08A' },
+    { id:'rumpf',    name:'Rumpf',       farbe:'#4DB8E8' },
+    { id:'skill',    name:'Skills',      farbe:'#B08AFF' },
+    { id:'erholung', name:'Erholung',    farbe:'#8A8A8A' },
+  ];
+  var AST_MAP = {}; AESTE.forEach(function(a){ AST_MAP[a.id] = a; });
+
+  /* ── Fortschritt aus dem Verlauf ─────────────────────────────
+     Der Baum liest nur mit; er schreibt nichts. Was trainiert
+     wurde, gilt als freigeschaltet.                              */
+  function freigeschaltet(){
+    var frei = {};
+    try{
+      var h = JSON.parse(localStorage.getItem('flow_history-state') || '{}');
+      Object.keys(h).forEach(function(tag){
+        var e = h[tag];
+        var s = (e && (e.sets || e.completed)) || {};
+        Object.keys(s).forEach(function(id){ frei[id] = true; });
+      });
+    }catch(e){}
+    try{
+      var pr = JSON.parse(localStorage.getItem('flow_pr-state') || '{}');
+      Object.keys(pr).forEach(function(id){ frei[id] = true; });
+    }catch(e){}
+    return frei;
+  }
+  var FREI = freigeschaltet();
+
+  /* Ohne jeden Verlauf wäre der Baum vollständig dunkel und wirkte
+     kaputt. Die erste Stufe ist darum immer offen — sie ist der
+     Einstieg, nicht die Belohnung.                                */
+  IDS.forEach(function(id){ if(U[id].stufe <= 1) FREI[id] = true; });
+
+  /* ── Anordnung: sechs Sektoren, Stufe = Abstand ─────────────── */
+  var knoten = [];
+  (function anordnen(){
+    var proAst = {};
+    IDS.forEach(function(id){
+      var a = U[id].ast || 'rumpf';
+      (proAst[a] = proAst[a] || []).push(id);
+    });
+    var n = AESTE.length;
+    AESTE.forEach(function(ast, ai){
+      var liste = (proAst[ast.id] || []).slice().sort(function(a,b){
+        return U[a].stufe - U[b].stufe || U[a].name.localeCompare(U[b].name);
+      });
+      var mitte = (ai / n) * Math.PI * 2 - Math.PI/2;
+      var breite = (Math.PI * 2 / n) * 0.90;
+
+      /* Innerhalb eines Astes nach Stufe in Ringe legen. */
+      var proStufe = {};
+      liste.forEach(function(id){ (proStufe[U[id].stufe] = proStufe[U[id].stufe] || []).push(id); });
+
+      Object.keys(proStufe).sort().forEach(function(st){
+        var reihe = proStufe[st];
+        reihe.forEach(function(id, i){
+          var t = reihe.length === 1 ? 0.5 : i / (reihe.length - 1);
+          var winkel = mitte + (t - 0.5) * breite;
+          var radius = 210 + (+st) * 205 + ((i % 2) ? 44 : 0);
+          knoten.push({
+            id: id, e: U[id], ast: ast,
+            x: Math.cos(winkel) * radius,
+            y: Math.sin(winkel) * radius,
+            r: 9 + U[id].stufe * 2.4,
+            frei: !!FREI[id],
+            phase: Math.random() * 6.28
+          });
+        });
+      });
+    });
+  })();
+  var K_MAP = {}; knoten.forEach(function(k){ K_MAP[k.id] = k; });
+
+  /* ── Verbindungen ────────────────────────────────────────────
+     Echte Verweise aus vorher/nachher. Wo keine stehen — also bei
+     rund vier Fünfteln — wird innerhalb desselben Astes zur
+     nächsten Stufe verbunden. Das ist ausdrücklich geraten und der
+     Platzhalter, den die echten Verweise später ersetzen.        */
+  var kanten = [];
+  (function verbinden(){
+    var gesetzt = {};
+    function kante(a, b, echt){
+      if(!a || !b || a === b) return;
+      var s = a < b ? a+'|'+b : b+'|'+a;
+      if(gesetzt[s]) return;
+      gesetzt[s] = 1;
+      kanten.push({ a: K_MAP[a], b: K_MAP[b], echt: !!echt });
+    }
+    IDS.forEach(function(id){
+      var e = U[id];
+      if(e.vorher && K_MAP[e.vorher]) kante(e.vorher, id, true);
+      if(e.nachher && K_MAP[e.nachher]) kante(id, e.nachher, true);
+    });
+    /* Geratene Verbindungen: je Knoten zum nächstgelegenen der
+       nächsthöheren Stufe im selben Ast.                         */
+    knoten.forEach(function(k){
+      if(k.e.nachher && K_MAP[k.e.nachher]) return;
+      var ziel = null, best = 1e9;
+      knoten.forEach(function(o){
+        if(o.ast.id !== k.ast.id || o.e.stufe !== k.e.stufe + 1) return;
+        var d = (o.x-k.x)*(o.x-k.x) + (o.y-k.y)*(o.y-k.y);
+        if(d < best){ best = d; ziel = o; }
+      });
+      if(ziel) kante(k.id, ziel.id, false);
+    });
+  })();
+
+  /* ── Leinwand ────────────────────────────────────────────────── */
+  var lw = document.getElementById('baum');
+  var cx = lw.getContext('2d');
+  var B = 0, H = 0, DPR = 1;
+  var kamera = { x:0, y:0, zoom:0.42, zielZoom:0.42 };
+  var zeit = 0, gewaehlt = null, ueber = null;
+
+  function groesse(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    /* Manche eingebetteten Ansichten melden kurzzeitig 0 — dann
+       waere die Leinwand null Pixel gross und der Baum unsichtbar.
+       Rueckfall auf das Dokument, zur Not auf einen festen Wert. */
+    B = window.innerWidth || document.documentElement.clientWidth || 1280;
+    H = window.innerHeight || document.documentElement.clientHeight || 720;
+    lw.width = B * DPR; lw.height = H * DPR;
+    lw.style.width = B + 'px'; lw.style.height = H + 'px';
+    cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', groesse);
+  groesse();
+
+  /* Startzoom aus der tatsaechlichen Ausdehnung rechnen statt fest
+     0.42. Der aeusserste Ring liegt bei Radius 1074; mit 0.42 ragte
+     der Baum ueber jeden ueblichen Bildschirm hinaus und man sah
+     beim Oeffnen verstreute Punkte statt eines Sternbilds.          */
+  (function startZoom(){
+    var maxR = 0;
+    knoten.forEach(function(k){
+      var d = Math.sqrt(k.x*k.x + k.y*k.y);
+      if(d > maxR) maxR = d;
+    });
+    if(!maxR) return;
+    var rand = Math.min(90, Math.min(B, H) * 0.12);   // Luft fuer Namen
+    var z = Math.min((B/2 - rand) / maxR, (H/2 - rand) / maxR);
+    kamera.zoom = kamera.zielZoom = Math.max(0.18, Math.min(0.9, z));
+  })();
+
+  /* Sterne im Hintergrund — dieselbe Sprache wie die Kammer. */
+  var sterne = [];
+  for(var i = 0; i < 220; i++){
+    sterne.push({ x:(Math.random()-0.5)*2600, y:(Math.random()-0.5)*2600,
+                  r:Math.random()*1.5+0.3, t:Math.random()*6.28,
+                  tiefe:0.3+Math.random()*0.7 });
+  }
+
+  function nachSchirm(x, y){
+    return { x: (x - kamera.x) * kamera.zoom + B/2,
+             y: (y - kamera.y) * kamera.zoom + H/2 };
+  }
+  function nachWelt(sx, sy){
+    return { x: (sx - B/2) / kamera.zoom + kamera.x,
+             y: (sy - H/2) / kamera.zoom + kamera.y };
+  }
+
+  /* ══ Der Ringapparat ══════════════════════════════════════════
+     Segmentierte Bögen, Ticks und Radialstriche um den gewählten
+     Knoten — dieselbe Sprache wie das Ladezeichen in
+     seitenwechsel.html, nur hier im Canvas statt in SVG.
+
+     Bewusst nur für einen Knoten: Der Apparat kostet rund fünfzig
+     Pfadoperationen. Einmal pro Bild ist das nichts, hundertmal
+     wäre es ein Ruckeln.                                          */
+  function hudRing(k){
+    var p = nachSchirm(k.x, k.y);
+    /* Fester Bezug am Bildschirm: der Apparat soll immer gleich
+       gross und lesbar sein, egal wie weit man herausgezoomt hat. */
+    var r = Math.max(k.r * kamera.zoom, 15);
+    /* MUSS ein sechsstelliger Hex bleiben. Weiter unten wird Alpha
+       als zwei Zeichen angehaengt (f + '3A'). Mit einem rgba()-Wert
+       ergaebe das "rgba(...)3A" — addColorStop wirft dann, mitten im
+       Bild, und die Schleife meldet nie das naechste Bild an. Genau
+       so fror der Baum beim Antippen einer gesperrten Uebung ein.
+       Der Wert entspricht dem frueheren rgba(245,241,234,.5) ueber
+       dem Hintergrund #080808.                                     */
+    var f = k.frei ? k.ast.farbe : '#7E7C79';
+    var t = zeit;
+
+    cx.save();
+    cx.translate(p.x, p.y);
+
+    /* Hof */
+    var hof = cx.createRadialGradient(0, 0, r, 0, 0, r * 7.5);
+    hof.addColorStop(0, f + '3A');
+    hof.addColorStop(1, f + '00');
+    cx.fillStyle = hof;
+    cx.beginPath(); cx.arc(0, 0, r * 7.5, 0, 6.29); cx.fill();
+
+    cx.lineCap = 'round';
+
+    /* Hauptring: sieben Segmente, ein Lichtpunkt wandert durch */
+    var R1 = r * 3.3, SEG = 7, LUECKE = 0.14;
+    var lauf = (t * 0.55) % 1;
+    for(var i = 0; i < SEG; i++){
+      var a1 = (i / SEG) * 6.283 + LUECKE/2 - 1.571;
+      var a2 = ((i+1) / SEG) * 6.283 - LUECKE/2 - 1.571;
+      var d = Math.abs((i / SEG) - lauf);
+      d = Math.min(d, 1 - d);
+      var hell = Math.max(0, 1 - d * 5.5);
+      hell = hell * hell * (3 - 2*hell);
+
+      cx.beginPath();
+      cx.arc(0, 0, R1, a1, a2);
+      cx.strokeStyle = f;
+      cx.globalAlpha = 0.16 + hell * 0.84;
+      cx.lineWidth = 1.5 + hell * 2.4;
+      cx.stroke();
+    }
+    cx.globalAlpha = 1;
+
+    /* Innerer dünner Ring */
+    cx.beginPath(); cx.arc(0, 0, r * 2.5, 0, 6.29);
+    cx.strokeStyle = f; cx.globalAlpha = 0.30;
+    cx.lineWidth = 1.0; cx.stroke();
+
+    /* Äußere Bögen, gegenläufig — asymmetrisch, damit es lebt */
+    var BOEGEN = [[0.15, 0.9], [1.7, 0.5], [2.9, 1.15], [4.4, 0.35], [5.2, 0.8]];
+    cx.globalAlpha = 0.42;
+    cx.lineWidth = 1.0;
+    BOEGEN.forEach(function(b, i){
+      var dreh = t * (i % 2 ? 0.13 : -0.09);
+      cx.beginPath();
+      cx.arc(0, 0, r * (4.4 + (i % 2) * 0.55), b[0] + dreh, b[0] + b[1] + dreh);
+      cx.stroke();
+    });
+
+    /* Tickmarks wie an einem Messinstrument — bei knapper Leistung
+       das Erste, was am Ring wegfaellt.                          */
+    if(stufeDetail >= 1){
+    cx.globalAlpha = 0.34;
+    cx.lineWidth = 0.9;
+    for(var j = 0; j < 32; j++){
+      var w = (j / 32) * 6.283 + t * 0.03;
+      var ri = r * 5.3, ro = r * (j % 4 === 0 ? 6.0 : 5.65);
+      cx.beginPath();
+      cx.moveTo(Math.cos(w) * ri, Math.sin(w) * ri);
+      cx.lineTo(Math.cos(w) * ro, Math.sin(w) * ro);
+      cx.stroke();
+    }
+
+    /* Punktekranz */
+    cx.globalAlpha = 0.5;
+    for(var q = 0; q < 40; q++){
+      var wq = (q / 40) * 6.283 - t * 0.05;
+      var gross = q % 7 === 0;
+      cx.beginPath();
+      cx.arc(Math.cos(wq) * r * 6.6, Math.sin(wq) * r * 6.6,
+             gross ? 1.8 : 0.9, 0, 6.29);
+      cx.fillStyle = f;
+      cx.fill();
+    }
+
+    }
+
+    /* Vier Radialstriche nach außen — die Antennen aus dem Bild */
+    cx.globalAlpha = 0.30;
+    cx.lineWidth = 0.9;
+    [0.6, 2.1, 3.7, 5.1].forEach(function(w, i){
+      var ww = w + t * 0.04;
+      var lang = r * (9 + (i % 2) * 4);
+      cx.beginPath();
+      cx.moveTo(Math.cos(ww) * r * 6.9, Math.sin(ww) * r * 6.9);
+      cx.lineTo(Math.cos(ww) * lang, Math.sin(ww) * lang);
+      cx.stroke();
+      cx.beginPath();
+      cx.arc(Math.cos(ww) * lang, Math.sin(ww) * lang, 1.7, 0, 6.29);
+      cx.fillStyle = f; cx.fill();
+    });
+
+    cx.globalAlpha = 1;
+    cx.restore();
+
+    /* Name gross daneben — im Bild steht er rechts, hier auf der
+       Seite mit mehr Platz.                                        */
+    var karteAuf = document.getElementById('karte').classList.contains('an');
+    var nutzbar = B - (karteAuf && B > 720 ? 390 : 0);
+    var rechts = p.x < nutzbar * 0.52;
+    var ab = r * 7.4;
+    var tx = p.x + (rechts ? ab : -ab);
+    cx.textAlign = rechts ? 'left' : 'right';
+    cx.font = '900 26px Inter, sans-serif';
+    var worte = k.e.name.toUpperCase().split(' ');
+    var zeilen = [], akt = '';
+    worte.forEach(function(w){
+      if((akt + ' ' + w).trim().length > 16){ zeilen.push(akt.trim()); akt = w; }
+      else akt = (akt + ' ' + w).trim();
+    });
+    if(akt) zeilen.push(akt);
+    var zh = 29;
+    cx.shadowColor = f; cx.shadowBlur = 16;
+    cx.fillStyle = '#F5F1EA';
+    zeilen.forEach(function(z, i){
+      cx.fillText(z, tx, p.y + (i - (zeilen.length-1)/2) * zh + zh*0.32);
+    });
+    cx.shadowBlur = 0;
+    cx.textAlign = 'center';
+  }
+
+  /* ══ Wache über die Bildrate ═══════════════════════════════════
+     Der Baum zeichnet je Bild rund fünfhundert Pfade — auf einem
+     Rechner nichts, auf einem schwachen Telefon kann es kippen.
+     Statt zu hoffen wird gemessen: bricht die Rate ein, fallen
+     zuerst die Sterne weg, dann der Kranz um den Ring. Das Bild
+     wird ärmer, aber es ruckelt nicht.                            */
+  var stufeDetail = 2;          // 2 = alles, 1 = ohne Sterne, 0 = nur Kern
+  var messFenster = [], letzteZeit = 0;
+
+  function detailPruefen(jetzt){
+    if(!letzteZeit){ letzteZeit = jetzt; return; }
+    var dt = jetzt - letzteZeit;
+    letzteZeit = jetzt;
+    if(dt <= 0 || dt > 500) return;         // Tab war im Hintergrund
+    messFenster.push(1000 / dt);
+    if(messFenster.length < 45) return;
+    var schnitt = messFenster.reduce(function(a,b){ return a+b; }, 0) / messFenster.length;
+    messFenster.length = 0;
+    if(schnitt < 38 && stufeDetail > 0) stufeDetail--;
+    else if(schnitt > 55 && stufeDetail < 2) stufeDetail++;
+  }
+
+  /* Ein einzelnes fehlerhaftes Bild darf die Schleife nicht beenden.
+     Ohne diese Klammer reicht EIN Wurf irgendwo im Zeichnen, damit
+     requestAnimationFrame am Ende nie erreicht wird — das Bild steht
+     dann fuer immer, und von aussen sieht es aus wie ein Absturz der
+     ganzen Seite. Der Fehler wird einmal gemeldet, nicht sechzigmal
+     pro Sekunde, sonst erstickt die Konsole.                        */
+  var fehlerGemeldet = false;
+
+  function zeichnen(jetzt){
+    try{
+      bildZeichnen(jetzt);
+    }catch(err){
+      if(!fehlerGemeldet){
+        fehlerGemeldet = true;
+        console.error('Baum: Fehler beim Zeichnen — das Bild laeuft weiter.', err);
+      }
+    }
+    requestAnimationFrame(zeichnen);
+  }
+
+  function bildZeichnen(jetzt){
+    detailPruefen(jetzt || 0);
+    zeit += 0.016;
+    kamera.zoom += (kamera.zielZoom - kamera.zoom) * 0.12;
+
+    cx.fillStyle = '#080808';
+    cx.fillRect(0, 0, B, H);
+
+    /* Sterne — als Erstes verzichtbar */
+    if(stufeDetail >= 2) sterne.forEach(function(s){
+      var p = nachSchirm(s.x * s.tiefe, s.y * s.tiefe);
+      if(p.x < -20 || p.x > B+20 || p.y < -20 || p.y > H+20) return;
+      var fl = 0.35 + 0.65 * (0.5 + 0.5*Math.sin(zeit*0.8 + s.t));
+      cx.globalAlpha = fl * s.tiefe * 0.55;
+      cx.fillStyle = '#F5F1EA';
+      cx.beginPath(); cx.arc(p.x, p.y, s.r * kamera.zoom * 0.8, 0, 6.29); cx.fill();
+    });
+    cx.globalAlpha = 1;
+
+    /* Kern in der Mitte */
+    var m = nachSchirm(0, 0);
+    var puls = 0.86 + 0.14*Math.sin(zeit*1.1);
+    var g = cx.createRadialGradient(m.x, m.y, 0, m.x, m.y, 150*kamera.zoom*puls);
+    g.addColorStop(0, 'rgba(232,73,43,.34)');
+    g.addColorStop(1, 'rgba(232,73,43,0)');
+    cx.fillStyle = g;
+    cx.beginPath(); cx.arc(m.x, m.y, 150*kamera.zoom*puls, 0, 6.29); cx.fill();
+
+    /* Verbindungen */
+    kanten.forEach(function(k){
+      var a = nachSchirm(k.a.x, k.a.y), b = nachSchirm(k.b.x, k.b.y);
+      var offen = k.a.frei && k.b.frei;
+      cx.beginPath();
+      cx.moveTo(a.x, a.y);
+      /* Leicht gebogen — gerade Linien sähen aus wie ein Diagramm,
+         nicht wie ein Baum.                                      */
+      var mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+      var dx = b.x-a.x, dy = b.y-a.y;
+      cx.quadraticCurveTo(mx - dy*0.09, my + dx*0.09, b.x, b.y);
+      cx.strokeStyle = offen ? k.a.ast.farbe : 'rgba(245,241,234,.09)';
+      cx.globalAlpha = offen ? 0.5 : 1;
+      cx.lineWidth = (k.echt ? 1.6 : 0.8) * kamera.zoom;
+      if(!k.echt) cx.setLineDash([3*kamera.zoom, 5*kamera.zoom]);
+      cx.stroke();
+      cx.setLineDash([]);
+      cx.globalAlpha = 1;
+    });
+
+    /* Der gewählte Knoten bekommt den vollen Ringapparat. Nur er —
+       hundert davon gleichzeitig wären hübsch und unbrauchbar. */
+    if(gewaehlt) hudRing(gewaehlt);
+
+    /* Knoten */
+    knoten.forEach(function(k){
+      var p = nachSchirm(k.x, k.y);
+      if(p.x < -60 || p.x > B+60 || p.y < -60 || p.y > H+60) return;
+      var r = k.r * kamera.zoom;
+      var istWahl = gewaehlt === k, istUeber = ueber === k;
+
+      if(k.frei){
+        var at = 0.72 + 0.28*Math.sin(zeit*1.5 + k.phase);
+        var hof = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r*3.6);
+        hof.addColorStop(0, k.ast.farbe + (istWahl ? 'AA' : '55'));
+        hof.addColorStop(1, k.ast.farbe + '00');
+        cx.globalAlpha = at;
+        cx.fillStyle = hof;
+        cx.beginPath(); cx.arc(p.x, p.y, r*3.6, 0, 6.29); cx.fill();
+        cx.globalAlpha = 1;
+      }
+
+      cx.beginPath();
+      cx.arc(p.x, p.y, r * (istWahl||istUeber ? 1.22 : 1), 0, 6.29);
+      cx.fillStyle = k.frei ? k.ast.farbe : '#141414';
+      cx.fill();
+      cx.lineWidth = (istWahl ? 2.4 : 1.2) * kamera.zoom;
+      cx.strokeStyle = k.frei ? (istWahl ? '#F5F1EA' : k.ast.farbe)
+                              : 'rgba(245,241,234,.26)';
+      cx.stroke();
+
+      /* Namen erst ab einer gewissen Nähe — sonst Buchstabensalat. */
+      if(!istWahl && (kamera.zoom > 1.05 || istUeber)){
+        cx.font = '600 ' + Math.round(10.5*Math.min(kamera.zoom,1.25)) + 'px Inter, sans-serif';
+        cx.textAlign = 'center';
+        cx.fillStyle = k.frei ? 'rgba(245,241,234,.88)' : 'rgba(245,241,234,.34)';
+        var t = k.e.name.length > 22 ? k.e.name.slice(0,21) + '…' : k.e.name;
+        cx.fillText(t, p.x, p.y + r + 14*Math.min(kamera.zoom,1.25));
+      }
+    });
+  }
+
+  /* ── Bedienung ───────────────────────────────────────────────── */
+  var zieht = false, letzteX = 0, letzteY = 0, bewegt = 0;
+
+  function treffer(sx, sy){
+    var w = nachWelt(sx, sy), best = null, bd = 1e9;
+    knoten.forEach(function(k){
+      var d = (k.x-w.x)*(k.x-w.x) + (k.y-w.y)*(k.y-w.y);
+      var reich = (k.r + 16/kamera.zoom); reich *= reich;
+      if(d < reich && d < bd){ bd = d; best = k; }
+    });
+    return best;
+  }
+
+  lw.addEventListener('pointerdown', function(e){
+    zieht = true; bewegt = 0;
+    letzteX = e.clientX; letzteY = e.clientY;
+    lw.classList.add('zieht');
+    lw.setPointerCapture(e.pointerId);
+  });
+  lw.addEventListener('pointermove', function(e){
+    if(!zieht){
+      ueber = treffer(e.clientX, e.clientY);
+      lw.style.cursor = ueber ? 'pointer' : 'grab';
+      return;
+    }
+    var dx = e.clientX - letzteX, dy = e.clientY - letzteY;
+    bewegt += Math.abs(dx) + Math.abs(dy);
+    kamera.x -= dx / kamera.zoom;
+    kamera.y -= dy / kamera.zoom;
+    letzteX = e.clientX; letzteY = e.clientY;
+  });
+  lw.addEventListener('pointerup', function(e){
+    zieht = false; lw.classList.remove('zieht');
+    /* Nur als Klick werten, wenn kaum bewegt wurde — sonst öffnet
+       jedes Ziehen eine Karte.                                    */
+    if(bewegt < 6){
+      var k = treffer(e.clientX, e.clientY);
+      if(k){
+        karteZeigen(k);
+        /* Etwas naeher heran, damit der Ringapparat zur Geltung
+           kommt — aber nur, wenn man weit draussen steht.        */
+        if(kamera.zielZoom < 0.75) kamera.zielZoom = 0.75;
+      }else karteZu();
+    }
+    hilfeWeg();
+  });
+  lw.addEventListener('wheel', function(e){
+    e.preventDefault();
+    kamera.zielZoom = Math.max(0.22, Math.min(2.4, kamera.zielZoom * (e.deltaY < 0 ? 1.12 : 0.89)));
+    hilfeWeg();
+  }, { passive:false });
+
+  /* Zwei Finger zum Zoomen */
+  var zeiger = {}, startAbstand = 0, startZoom = 1;
+  lw.addEventListener('pointerdown', function(e){ zeiger[e.pointerId] = e; });
+  lw.addEventListener('pointermove', function(e){
+    if(!(e.pointerId in zeiger)) return;
+    zeiger[e.pointerId] = e;
+    var ids = Object.keys(zeiger);
+    if(ids.length !== 2) return;
+    var a = zeiger[ids[0]], b = zeiger[ids[1]];
+    var d = Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+    if(!startAbstand){ startAbstand = d; startZoom = kamera.zielZoom; return; }
+    kamera.zielZoom = Math.max(0.22, Math.min(2.4, startZoom * (d/startAbstand)));
+    zieht = false;
+  });
+  function zeigerWeg(e){ delete zeiger[e.pointerId]; if(Object.keys(zeiger).length < 2) startAbstand = 0; }
+  lw.addEventListener('pointerup', zeigerWeg);
+  lw.addEventListener('pointercancel', zeigerWeg);
+
+  function hilfeWeg(){ document.getElementById('hilfe').classList.add('weg'); }
+  setTimeout(hilfeWeg, 7000);
+
+  /* ── Die Karte ───────────────────────────────────────────────── */
+  var SVG2M = { brust:'brust', trizeps:'trizeps', brachialis:'bizeps', lats:'lat',
+    schultern:'schultern', bauch:'bauch', quads:'oberschenkel', hamstrings:'oberschenkel',
+    gesaess:'gesaess', traps:'trapez', erector:'unterer_ruecken', waden:'waden',
+    sartorius:'huefte', unterarme:'unterarme', schraege:'saege',
+    adduktoren:'adduktoren', tibialis:'waden' };
+
+  function koerperMalen(e){
+    var g = window.FLOW_MSVG;
+    var f = document.getElementById('k-front'), b = document.getElementById('k-back');
+    if(!g){ f.innerHTML = b.innerHTML = ''; return; }
+    if(!f.dataset.gebaut){ f.innerHTML = g.front; b.innerHTML = g.back; f.dataset.gebaut = b.dataset.gebaut = '1'; }
+    var p = e.primary || [], s = e.secondary || [];
+    [f, b].forEach(function(h){
+      h.querySelectorAll('[data-m]').forEach(function(gr){
+        var mid = SVG2M[gr.dataset.m];
+        gr.classList.toggle('p', !!mid && p.indexOf(mid) >= 0);
+        gr.classList.toggle('s', !!mid && p.indexOf(mid) < 0 && s.indexOf(mid) >= 0);
+      });
+    });
+  }
+
+  /* ══ Bestwerte ═══════════════════════════════════════════════
+     Die App führt sie schon unter `flow_pr-state` — Wert und Datum
+     je Übung. Der Baum liest dieselbe Ablage und schreibt in sie
+     zurück, damit beide Seiten denselben Stand sehen.
+
+     Zur Frage, was gilt, wenn kein Bestwert bekannt ist: dann steht
+     dort nichts. Kein geschätzter Wert, keine Null — eine Lücke ist
+     ehrlicher als eine erfundene Zahl, und sie ist der Anlass, sie
+     zu füllen.                                                    */
+  function prLesen(){
+    try{ return JSON.parse(localStorage.getItem('flow_pr-state') || '{}'); }
+    catch(e){ return {}; }
+  }
+  function prSchreiben(id, wert){
+    var alle = prLesen();
+    var jetzt = new Date().toISOString();
+    alle[id] = { value: wert, date: jetzt };
+    try{ localStorage.setItem('flow_pr-state', JSON.stringify(alle)); }catch(e){}
+    try{
+      var log = JSON.parse(localStorage.getItem('flow_pr-log') || '[]');
+      log.push({ ex: id, value: wert, date: jetzt });
+      localStorage.setItem('flow_pr-log', JSON.stringify(log));
+    }catch(e){}
+  }
+  function einheit(e){
+    return e.type === 'time' ? 's' : e.type === 'activity' ? 'Min.' : 'Wdh.';
+  }
+
+  function prMalen(k){
+    var e = k.e;
+    var pr = prLesen()[e.id];
+    var zahl = document.getElementById('k-pr-zahl');
+    var eh = document.getElementById('k-pr-einheit');
+    var dat = document.getElementById('k-pr-datum');
+    var hin = document.getElementById('k-pr-hinweis');
+    hin.className = 'k-pr-hinweis';
+
+    if(pr && pr.value){
+      zahl.textContent = pr.value;
+      zahl.classList.remove('leer');
+      eh.textContent = einheit(e);
+      try{
+        var d = new Date(pr.date);
+        dat.textContent = d.toLocaleDateString('de-DE',
+          { day:'2-digit', month:'2-digit', year:'numeric' });
+      }catch(x){ dat.textContent = ''; }
+      hin.textContent = '';
+    }else{
+      zahl.textContent = 'noch offen';
+      zahl.classList.add('leer');
+      eh.textContent = '';
+      dat.textContent = '';
+      hin.textContent = k.frei
+        ? 'Trag ein, was du heute schaffst — oder lass es leer, bis du es misst.'
+        : 'Noch nicht freigeschaltet. Ein Bestwert lässt sich trotzdem eintragen.';
+    }
+    document.getElementById('k-pr-eingabe').value = '';
+  }
+
+  (function prKnopf(){
+    var feld = document.getElementById('k-pr-eingabe');
+    var knopf = document.getElementById('k-pr-setzen');
+    function setzen(){
+      if(!gewaehlt) return;
+      var roh = (feld.value || '').replace(',', '.').trim();
+      var v = parseFloat(roh);
+      var hin = document.getElementById('k-pr-hinweis');
+      if(!isFinite(v) || v <= 0){
+        hin.className = 'k-pr-hinweis';
+        hin.textContent = 'Bitte eine Zahl größer als null.';
+        return;
+      }
+      var alt = prLesen()[gewaehlt.e.id];
+      if(alt && v <= alt.value){
+        hin.className = 'k-pr-hinweis';
+        hin.textContent = 'Das liegt unter deinem Bestwert von ' + alt.value +
+                          ' ' + einheit(gewaehlt.e) + ' — er bleibt stehen.';
+        feld.value = '';
+        return;
+      }
+      prSchreiben(gewaehlt.e.id, v);
+      prMalen(gewaehlt);
+      hin.className = 'k-pr-hinweis gut';
+      hin.textContent = alt ? 'Neuer Bestwert. Vorher: ' + alt.value + ' ' + einheit(gewaehlt.e) + '.'
+                            : 'Erster Bestwert gesetzt.';
+    }
+    knopf.addEventListener('click', setzen);
+    feld.addEventListener('keydown', function(e){ if(e.key === 'Enter') setzen(); });
+  })();
+
+  function karteZeigen(k){
+    gewaehlt = k;
+    var e = k.e;
+    var kk = document.getElementById('karte');
+    /* Den Knoten aus dem Bereich schieben, den die Karte belegt —
+       sonst steht der Ringapparat hinter ihr.                     */
+    /* Immer zum Knoten fahren — sonst bleibt der Ringapparat
+       ausserhalb des Bildes stehen. Der Versatz nach rechts kommt
+       nur dazu, wenn die Karte danebenpasst; `B` ist die gemessene
+       Breite, window.innerWidth ist in eingebetteten Ansichten
+       nicht verlaesslich.                                        */
+    var versatz = (B > 720) ? (185 / Math.max(kamera.zielZoom, 0.35)) : 0;
+    kamera.x = k.x + versatz;
+    kamera.y = k.y;
+    document.getElementById('k-ast').textContent = k.ast.name + ' · Stufe ' + e.stufe;
+    document.getElementById('k-ast').style.color = k.ast.farbe;
+    document.getElementById('k-name').textContent = e.name;
+    document.getElementById('k-txt').textContent = e.description || '';
+    prMalen(k);
+    document.getElementById('k-sperre').hidden = k.frei;
+    koerperMalen(e);
+
+    /* Nachbarn im Baum, damit man weiterspringen kann. */
+    var kette = document.getElementById('k-kette');
+    kette.innerHTML = '';
+    kanten.forEach(function(kn){
+      var o = kn.a === k ? kn.b : (kn.b === k ? kn.a : null);
+      if(!o) return;
+      var leichter = o.e.stufe < e.stufe;
+      var b = document.createElement('button');
+      b.innerHTML = '<i>' + (leichter ? 'davor' : 'danach') + '</i> ' + o.e.name;
+      b.addEventListener('click', function(){
+        if(kamera.zielZoom < 0.8) kamera.zielZoom = 0.8;
+        karteZeigen(o);
+      });
+      kette.appendChild(b);
+    });
+
+    kk.classList.add('an');
+    document.body.classList.add('karte-auf');
+  }
+  function karteZu(){
+    gewaehlt = null;
+    document.getElementById('karte').classList.remove('an');
+    document.body.classList.remove('karte-auf');
+  }
+  document.getElementById('karte-zu').addEventListener('click', karteZu);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') karteZu(); });
+
+  /* ── Legende ─────────────────────────────────────────────────── */
+  (function legende(){
+    var w = document.getElementById('aeste');
+    AESTE.forEach(function(a){
+      var n = knoten.filter(function(k){ return k.ast.id === a.id; });
+      var offen = n.filter(function(k){ return k.frei; }).length;
+      var b = document.createElement('button');
+      b.className = 'ast-z';
+      b.innerHTML = '<i style="background:' + a.farbe + ';color:' + a.farbe + '"></i>' +
+                    a.name + '<b>' + offen + '/' + n.length + '</b>';
+      b.addEventListener('click', function(){
+        /* Zum Schwerpunkt des Astes fahren. Ein leerer Ast wuerde
+           durch null teilen — die Kamera stuende auf NaN und der
+           ganze Baum waere weg. Heute hat jeder Ast Knoten, aber
+           das haengt an den Daten, nicht am Code.                 */
+        if(!n.length) return;
+        var sx = 0, sy = 0;
+        n.forEach(function(k){ sx += k.x; sy += k.y; });
+        kamera.x = sx/n.length; kamera.y = sy/n.length;
+        kamera.zielZoom = 0.8;
+        document.querySelectorAll('.ast-z').forEach(function(x){ x.classList.remove('an'); });
+        b.classList.add('an');
+      });
+      w.appendChild(b);
+    });
+  })();
+
+  /* ── Zähler ──────────────────────────────────────────────────── */
+  var offen = knoten.filter(function(k){ return k.frei; }).length;
+  document.getElementById('offen').textContent = offen;
+  document.getElementById('gesamt').textContent = knoten.length;
+  document.getElementById('unter').textContent =
+    knoten.length + ' Übungen · ' + AESTE.length + ' Äste';
+
+  zeichnen();
+
+  window.__baum = { knoten: knoten, kanten: kanten, kamera: kamera,
+    echteKanten: kanten.filter(function(k){ return k.echt; }).length,
+    /* karteZeigen richtet die Kamera schon aus — hier nur noch
+       den Zoom anheben, sonst steht der Ring als Punkt da.       */
+    zeige: function(id){ if(K_MAP[id]){
+      if(kamera.zielZoom < 0.75) kamera.zielZoom = 0.75;
+      karteZeigen(K_MAP[id]);
+    } } };
+})();
+</script>
+</body>
+</html>

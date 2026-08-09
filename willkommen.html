@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="flow-logo-klein.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<title>Quenlo — Das kannst du hier</title>
+<!-- Fuer Suchmaschinen und zum Teilen. Die Beschreibung ist das,
+     was unter dem blauen Link bei Google steht; die og-Zeilen sind
+     die Vorschaukarte in WhatsApp, Instagram und Discord.
+     og:image MUSS eine vollstaendige Adresse sein — mit einem
+     relativen Pfad zeigen die Netzwerke gar kein Bild.        -->
+<meta name="description" content="Wochenplan, Skill-Tree und Fortschritt auf einen Blick. So funktioniert Quenlo.">
+<link rel="canonical" href="https://calisthanics.cc.cd/willkommen.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Quenlo">
+<meta property="og:title" content="Quenlo — Das kannst du hier">
+<meta property="og:description" content="Wochenplan, Skill-Tree und Fortschritt auf einen Blick. So funktioniert Quenlo.">
+<meta property="og:url" content="https://calisthanics.cc.cd/willkommen.html">
+<meta property="og:image" content="https://calisthanics.cc.cd/flow-logo-klein.png">
+<meta name="twitter:card" content="summary">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap" rel="stylesheet">
+<style>
+  /* Palette 1:1 aus loading.html übernommen — sonst nichts von dort. */
+  :root{
+    --paper:#ffffff;
+    --ink:#000000;
+    --ember:#E8492B;
+    --font:'Inter',system-ui,sans-serif;
+    --curve:cubic-bezier(.19,1,.22,1); /* dieselbe Kurve wie im Rest von Quenlo */
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overscroll-behavior:none;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font);
+    overflow:hidden;
+    touch-action:manipulation;
+    transition:background .6s var(--curve);
+  }
+  body.on-ember{background:var(--ember);}
+
+  #stage{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    padding:0 6vw;
+  }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:0;
+    opacity:0; pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .slide.active{opacity:1; pointer-events:auto;}
+
+  .line{
+    display:block;
+    text-align:center;
+  }
+  /* jedes Wort bekommt eine eigene Maske: overflow versteckt den Weg von unten */
+  .mask{
+    display:inline-block;
+    overflow:hidden;
+    vertical-align:top;
+  }
+  .word{
+    display:inline-block;
+    font-weight:900;
+    text-transform:uppercase;
+    line-height:.94;
+    letter-spacing:-.01em;
+    font-size:clamp(34px, 12.4vw, 118px);
+    white-space:pre;
+    transform:translateY(115%);
+    will-change:transform;
+  }
+  .slide.active .word{
+    animation:word-in .78s var(--curve) forwards;
+    animation-delay:calc(var(--i) * 65ms);
+  }
+  @keyframes word-in{
+    to{ transform:translateY(0); }
+  }
+
+  /* letzte Seite: Text in Weiß auf Ember, statt Schwarz auf Papier */
+  .slide[data-theme="ember"] .word{ color:var(--paper); }
+
+  @media (prefers-reduced-motion: reduce){
+    .word{ transition:none; animation:none !important; transform:none; }
+  }
+
+  .sr-only{
+    position:absolute; width:1px; height:1px; overflow:hidden;
+    clip:rect(0 0 0 0); white-space:nowrap;
+  }
+</style>
+<!-- Seitenwechsel: schwarzes Vollbild mit Lade-Ring beim Sprung ins
+     Tutorial. Deckt die Ladezeit der 2,2 MB grossen tutorial.html ab. -->
+<script src="schwellenklang.js" defer></script>
+<script src="seitenwechsel.js" defer></script>
+
+<!-- Umami — zaehlt Besuche, ohne Cookies und ohne persoenliche Daten.
+     Deshalb braucht die Seite kein Einwilligungsbanner.
+     "defer" ist wichtig: so haelt das Skript den Seitenaufbau nicht auf.
+     Die website-id ist keine Geheimzahl — sie steht bei jedem Umami
+     offen im Quelltext und identifiziert nur, zu welcher Seite die
+     Zaehlung gehoert.                                              -->
+<script defer src="https://cloud.umami.is/script.js" data-website-id="f2476503-16f0-40d2-a1e4-56d71a3f2061"></script>
+</head>
+<body>
+
+<div id="stage" role="button" aria-label="Weiter zur nächsten Seite" tabindex="0">
+  <div id="slides"></div>
+</div>
+
+<div id="live" class="sr-only" aria-live="polite"></div>
+<p class="sr-only">Tippen, Pfeiltasten oder Leertaste zum Blättern. Nach links tippen für zurück.</p>
+
+<script>
+(function(){
+  /* ── Inhalt: eine Aussage pro Seite, zwei kurze Zeilen ─────────── */
+  const SLIDES = [
+    { lines:['Dein Plan', 'steht schon'] },
+    { lines:['Jede Übung', 'hat zwei Wege'] },
+    { lines:['Dein Körper', 'glüht live'] },
+    { lines:['Neuer Bestwert', 'wird gefeiert'] },
+    { lines:['Jeder Satz', 'hebt deinen Rang'] },
+    { lines:['Nichts notieren.', 'Alles bleibt.'] },
+    { lines:['Bereit?', 'Fang an.'], theme:'ember' },
+  ];
+
+  const root = document.getElementById('slides');
+  const body = document.body;
+  const live = document.getElementById('live');
+  let current = -1;
+
+  /* Baut alle Slides einmal vor, jedes Wort in seine eigene Maske */
+  SLIDES.forEach((s, si)=>{
+    const el = document.createElement('div');
+    el.className = 'slide';
+    el.dataset.index = si;
+    if(s.theme) el.dataset.theme = s.theme;
+
+    let wordCounter = 0;
+    s.lines.forEach(lineText=>{
+      const line = document.createElement('div');
+      line.className = 'line';
+      lineText.split(' ').forEach((w, wi, arr)=>{
+        const mask = document.createElement('span');
+        mask.className = 'mask';
+        const word = document.createElement('span');
+        word.className = 'word';
+        word.style.setProperty('--i', wordCounter++);
+        word.textContent = w + (wi < arr.length - 1 ? ' ' : '');
+        mask.appendChild(word);
+        line.appendChild(mask);
+      });
+      el.appendChild(line);
+    });
+    root.appendChild(el);
+  });
+
+  const slideEls = Array.from(root.children);
+
+  function show(i){
+    if(i < 0 || i >= slideEls.length) return;
+    slideEls.forEach(el=>el.classList.remove('active'));
+    /* Reflow erzwingen, damit die Wort-Animation bei jedem Aufruf neu startet */
+    void root.offsetWidth;
+    slideEls[i].classList.add('active');
+    body.classList.toggle('on-ember', slideEls[i].dataset.theme === 'ember');
+    current = i;
+    live.textContent = SLIDES[i].lines.join(' — ');
+  }
+
+  let verlassen = false;
+  function next(){
+    /* Auf der letzten Folie ("Bereit? Fang an.") führt der nächste
+       Tipp weiter ins Tutorial. Der Wächter verhindert, dass ein
+       zweiter Tipp während des Ausblendens nochmal auslöst.        */
+    if(current >= slideEls.length - 1){
+      if(verlassen) return;
+      verlassen = true;
+      /* Der Lade-Ring legt sich als schwarzes Vollbild darüber und deckt
+         die Ladezeit der 2,2 MB grossen tutorial.html ab. Das frühere
+         Ausblenden der Seite entfällt — das Overlay ist bereits deckend,
+         zwei Blenden übereinander wirken nur matschig. */
+      if(window.FLOWWechsel){
+        FLOWWechsel.gehe('tutorial.html');
+      }else{
+        document.body.style.transition = 'opacity .45s ease';
+        document.body.style.opacity = '0';
+        setTimeout(()=>{ window.location.href = 'tutorial.html'; }, 450);
+      }
+      return;
+    }
+    show(current + 1);
+  }
+  function prev(){ show(current - 1); }
+
+  /* Tippen: linke Bildschirmhälfte = zurück, rechte = weiter */
+  document.getElementById('stage').addEventListener('click', (e)=>{
+    const half = window.innerWidth / 2;
+    if(e.clientX < half) prev(); else next();
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+    if(e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+  });
+
+  /* Swipe für Touch-Geräte */
+  let touchX = null;
+  document.addEventListener('touchstart', e=>{ touchX = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', e=>{
+    if(touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if(Math.abs(dx) > 40){ dx < 0 ? next() : prev(); }
+    touchX = null;
+  }, {passive:true});
+
+  show(0);
+})();
+</script>
+
+</body>
+</html>
